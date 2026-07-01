@@ -1,0 +1,10 @@
+.agents/
+.claude/
+.codex/
+.github/
+.obsidian/
+graphify-out/
+Machine/Graph/
+Machine/Outputs/
+Machine/TaskGantt/
+Assets/

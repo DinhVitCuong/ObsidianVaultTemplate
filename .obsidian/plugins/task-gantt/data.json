@@ -1,0 +1,27 @@
+{
+  "rootFolder": "Machine/TaskGantt/Start-of-Day",
+  "recurse": true,
+  "defaultZoom": "Week",
+  "tagColors": [
+    {
+      "name": "priority/highest",
+      "color": "#d83a30"
+    },
+    {
+      "name": "priority/high",
+      "color": "#e95d4f"
+    },
+    {
+      "name": "priority/medium",
+      "color": "#c9861a"
+    },
+    {
+      "name": "priority/low",
+      "color": "#3b82f6"
+    },
+    {
+      "name": "priority/lowest",
+      "color": "#94a3b8"
+    }
+  ]
+}
