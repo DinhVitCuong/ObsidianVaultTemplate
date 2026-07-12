@@ -10,6 +10,24 @@ tags:
 
 # NezuMiii Lazy Dashboard
 
+> [!dashboard-visuals]
+> > [!dashboard-panel]
+> > ![[Assets/Dashboard/reference-layout.png|Dashboard reference]]
+>
+> > [!dashboard-panel]
+> > ```juggl
+> > local: Dashboard
+> > layout: force-directed
+> > width: 100%
+> > height: 20rem
+> > limit: 160
+> > navigator: false
+> > toolbar: false
+> > ```
+
+> [!dashboard-graph-seed]
+> [[TODO]] · [[Daily Notes]] · [[Machine/Graph/retrieval-map]] · [[Machine/Graph/GRAPH_REPORT]] · [[Sources/github_trending_targets]] · [[Sources/hf_hub_targets]]
+
 ```dataviewjs
 const now = dv.luxon.DateTime.now();
 const todayPath = `daily_notes/${now.toFormat("yyyy/MM/dd")}`;
@@ -20,38 +38,26 @@ const doneTasks = tasks.where(t => t.completed);
 const graphPages = dv.pages('"Machine/Graph"').array();
 const graphReport = graphPages.find(p => p.type === "graph-report");
 const retrievalMap = graphPages.find(p => p.type === "retrieval-map");
+function asDate(value) {
+  if (!value) return null;
+  const date = dv.date(value);
+  return date && date.isValid !== false ? date : null;
+}
+function formatDate(value, format, fallback = "") {
+  const date = asDate(value);
+  return date ? date.toFormat(format) : fallback;
+}
 const graphGeneratedAt = graphReport?.generated_at
-  ? dv.date(graphReport.generated_at).toFormat("MM-dd HH:mm")
+  ? formatDate(graphReport.generated_at, "MM-dd HH:mm", "pending")
   : "pending";
-const graphifyGraphPath = "graphify-out/graph.html";
-const graphifyGraphJsonPath = "graphify-out/graph.json";
-const graphifyReportPath = "graphify-out/GRAPH_REPORT.md";
-const referenceImagePath = "Assets/Dashboard/reference-layout.png";
+const jugglPluginId = "juggl";
+const jugglAvailable = !!app.plugins?.plugins?.[jugglPluginId];
 const plotlyPath = "Assets/vendor/plotly-2.35.2.min.js";
 const taskGanttFolderPath = "Machine/TaskGantt/Start-of-Day";
-const graphifyGraphExists = !!app.vault.getAbstractFileByPath(graphifyGraphPath);
-const graphifyGraphJsonExists = !!app.vault.getAbstractFileByPath(graphifyGraphJsonPath);
-const graphifyReportExists = !!app.vault.getAbstractFileByPath(graphifyReportPath);
-const referenceImageExists = !!app.vault.getAbstractFileByPath(referenceImagePath);
 const plotlyExists = !!app.vault.getAbstractFileByPath(plotlyPath);
-const referenceImageSrc = referenceImageExists && typeof app.vault.adapter.getResourcePath === "function"
-  ? app.vault.adapter.getResourcePath(referenceImagePath)
-  : referenceImagePath;
-const graphifyGraphSrc = graphifyGraphExists && typeof app.vault.adapter.getResourcePath === "function"
-  ? app.vault.adapter.getResourcePath(graphifyGraphPath)
-  : graphifyGraphPath;
 const plotlySrc = plotlyExists && typeof app.vault.adapter.getResourcePath === "function"
   ? app.vault.adapter.getResourcePath(plotlyPath)
   : plotlyPath;
-
-let graphifyGraphData = null;
-if (graphifyGraphJsonExists) {
-  try {
-    graphifyGraphData = JSON.parse(await app.vault.adapter.read(graphifyGraphJsonPath));
-  } catch (error) {
-    console.error("Failed to read graphify-out/graph.json", error);
-  }
-}
 
 const startOfDayTasks = [];
 for (const page of dailyPages) {
@@ -72,7 +78,7 @@ const overdueTasks = openTasks.where(t => t.due && t.due < now.startOf("day"));
 
 const dailyDates = new Set(dailyPages
   .map(p => {
-    if (p.date) return dv.date(p.date).toFormat("yyyy-MM-dd");
+    if (p.date) return formatDate(p.date, "yyyy-MM-dd", null);
     const match = p.file.path.match(/daily_notes\/(\d{4})\/(\d{2})\/(\d{2})\.md$/);
     return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
   })
@@ -128,13 +134,9 @@ function table(headers, rows) {
 function taskRows(source, limit = 5) {
   return source.limit(limit).map(t => {
     const path = t.path ? t.path.replace(/\.md$/, "") : "";
-    const due = t.due ? dv.date(t.due).toFormat("MM-dd") : "";
+    const due = formatDate(t.due, "MM-dd");
     return [esc(t.text), due || "-", path ? link(path, "note") : ""];
   });
-}
-
-function fileLink(path, label = null) {
-  return `<a class="dash-file-link" href="${esc(path)}">${esc(label ?? path)}</a>`;
 }
 
 function dailyKeyFromPath(path) {
@@ -144,7 +146,7 @@ function dailyKeyFromPath(path) {
 
 function taskDate(task) {
   const dailyKey = dailyKeyFromPath(task.path);
-  return dailyKey ? dv.date(dailyKey) : (task.due ? dv.date(task.due) : null);
+  return dailyKey ? asDate(dailyKey) : asDate(task.due);
 }
 
 function taskTrendContainer(id) {
@@ -244,7 +246,7 @@ function yamlString(value) {
 
 function taskGanttNote(task, index) {
   const sourceDate = taskDate(task) || now.startOf("day");
-  const due = task.due ? dv.date(task.due) : sourceDate;
+  const due = asDate(task.due) || sourceDate;
   const source = task.path || "";
   const priority = taskPriority(task);
   const completed = !!task.completed;
@@ -296,7 +298,7 @@ function taskGanttPanel(source) {
     .array()
     .map(task => {
       const start = taskDate(task) || now.startOf("day");
-      const due = task.due ? dv.date(task.due) : null;
+      const due = asDate(task.due);
       const end = due && due >= start ? due : start.plus({ days: 1 });
       return { task, start: start.startOf("day"), end: end.startOf("day") };
     });
@@ -330,7 +332,7 @@ function taskGanttPanel(source) {
     const left = Math.min(96, (offset / totalDays) * 100);
     const width = Math.max(4, Math.min(100 - left, (duration / totalDays) * 100));
     const sourceDate = taskDate(task);
-    const due = task.due ? dv.date(task.due).toFormat("MM-dd") : "no due";
+    const due = formatDate(task.due, "MM-dd", "no due");
     const path = task.path ? task.path.replace(/\.md$/, "") : "";
     const priority = taskPriority(task);
     const title = cleanTaskText(task.text) || task.text;
@@ -547,19 +549,6 @@ async function renderTaskTrendPlot() {
 const taskTrend = buildTaskTrend(dv.array(startOfDayTasks));
 
 const page = dv.el("div", "", { cls: "dash-page" });
-const visualTop = document.createElement("div");
-visualTop.className = "dash-visuals";
-visualTop.innerHTML = `
-  <div class="image-reference image-panel" aria-label="Image reference">
-    ${referenceImageExists ? `<img src="${esc(referenceImageSrc)}" alt="">` : ""}
-  </div>
-  <div class="image-reference graph-reference">
-    ${graphifyGraphExists
-      ? `<iframe src="${esc(graphifyGraphSrc)}" title="Graphify interactive graph"></iframe>`
-      : `<div class="graph-missing"><b>graphify-out/graph.html</b></div>`}
-  </div>
-`;
-
 const shell = document.createElement("div");
 shell.className = "dash-shell";
 const layout = document.createElement("div");
@@ -568,7 +557,6 @@ const sidebar = document.createElement("aside");
 sidebar.className = "dash-sidebar";
 shell.appendChild(layout);
 shell.appendChild(sidebar);
-page.appendChild(visualTop);
 page.appendChild(shell);
 
 function card(title, body, cls = "", target = layout) {
@@ -622,7 +610,6 @@ card("Start Here", `
     ${link("Daily Notes", "Daily Notes")}
     ${link("Machine/Graph/retrieval-map", "Retrieval Map")}
     ${link("Machine/Graph/GRAPH_REPORT", "Graph Report")}
-    ${graphifyReportExists ? link(graphifyReportPath, "Graphify Report") : `<span class="dash-pill muted">Graphify Report</span>`}
     ${link("Sources/github_trending_targets", "GitHub targets")}
     ${link("Sources/hf_hub_targets", "HF targets")}
   </div>
@@ -636,7 +623,7 @@ card("Monitor", `<div class="metrics-row">
   ${pill("done", doneTasks.length)}
   ${pill("notes", allPages.length)}
   ${pill("graph index", graphReport ? "ready" : "pending")}
-  ${pill("graphify cli", graphifyGraphExists ? "ready" : "pending")}
+  ${pill("inline graph", jugglAvailable ? "ready" : "reload")}
 </div>`, "span-12");
 
 card("Task Trend", taskTrendContainer("task-trend-plot"), "span-6");
@@ -660,7 +647,7 @@ card("Today", `
 card("Source Watchlist", table(["Source", "Updated"], dv.pages('"Sources"')
   .array()
   .sort((a, b) => b.file.mtime - a.file.mtime)
-  .map(p => [link(p.file.path.replace(/\.md$/, ""), p.file.name), dv.date(p.file.mtime).toFormat("MM-dd HH:mm")])), "span-3");
+  .map(p => [link(p.file.path.replace(/\.md$/, ""), p.file.name), formatDate(p.file.mtime, "MM-dd HH:mm", "-")])), "span-3");
 
 async function ensureFolder(path) {
   const parts = path.split("/").slice(0, -1);
@@ -684,7 +671,7 @@ function expandDailyTemplate(template, dateKey) {
     .replace(/{{\s*time\s*:\s*([^}]+?)\s*}}/gi, (_, format) => nowMoment.format(format.trim()));
 }
 
-shell.addEventListener("click", async event => {
+page.addEventListener("click", async event => {
   const ganttButton = event.target.closest(".gantt-plugin-open");
   if (ganttButton) {
     event.preventDefault();
@@ -740,7 +727,7 @@ sideCard("Focus Board", `
 
 sideCard("Recent Notes", table(["Note", "Updated"], recentPages.map(p => [
   link(p.file.path.replace(/\.md$/, ""), noteLabel(p)),
-  dv.date(p.file.mtime).toFormat("MM-dd HH:mm")
+  formatDate(p.file.mtime, "MM-dd HH:mm", "-")
 ])), "scroll-card");
 
 sideCard("Weekly Pulse", table(["Day", "Note"], Array.from({ length: 7 }, (_, i) => {
@@ -750,18 +737,18 @@ sideCard("Weekly Pulse", table(["Day", "Note"], Array.from({ length: 7 }, (_, i)
   return [d.toFormat("ccc dd"), dailyDates.has(key) ? link(path, "done") : dailyLink(path, "open", d)];
 })));
 
-card("Graphify Status", `
+card("Vault Graph", `
   <div class="graph-status">
-    <div><b>Codex retrieval graph</b><span class="${graphReport ? "status-ready" : "status-pending"}">${graphReport ? "ready" : "pending"}</span></div>
-    <div><b>Real Graphify output</b><span class="${graphifyGraphExists ? "status-ready" : "status-pending"}">${graphifyGraphExists ? "ready" : "pending"}</span></div>
+    <div><b>Juggl inline graph</b><span class="${jugglAvailable ? "status-ready" : "status-pending"}">${jugglAvailable ? "ready" : "reload"}</span></div>
+    <div><b>Codex retrieval index</b><span class="${graphReport ? "status-ready" : "status-pending"}">${graphReport ? "ready" : "pending"}</span></div>
     <div><b>Last local index</b><span>${esc(graphGeneratedAt)}</span></div>
-    <div><b>Builder</b><span><code>bash scripts/update_graphify_index.sh</code></span></div>
   </div>
+  <p>${jugglAvailable
+    ? "The interactive graph is beside the dashboard image."
+    : "Reload Obsidian once to activate the inline graph."}</p>
   ${table(["Output", "Purpose"], [
     [retrievalMap ? link("Machine/Graph/retrieval-map", "retrieval-map.md") : "retrieval-map.md", "Codex first-read map"],
     [graphReport ? link("Machine/Graph/GRAPH_REPORT", "GRAPH_REPORT.md") : "GRAPH_REPORT.md", "Human graph summary"],
-    [graphifyReportExists ? link(graphifyReportPath, "graphify-out/GRAPH_REPORT.md") : "graphify-out/GRAPH_REPORT.md", "Graphify audit report"],
-    [graphifyGraphExists ? fileLink(graphifyGraphPath, "graphify-out/graph.html") : "graphify-out/graph.html", "Interactive graph preview"],
     [link("Machine/Graph/graph.json", "graph.json"), "Machine-readable fallback graph"],
   ])}
 `, "span-4");
@@ -769,7 +756,7 @@ card("Graphify Status", `
 card("Graph Files", table(["File", "Updated"], graphPages
   .filter(p => p.type === "graph-report" || p.type === "retrieval-map")
   .sort((a, b) => a.file.name.localeCompare(b.file.name))
-  .map(p => [link(p.file.path.replace(/\.md$/, ""), p.file.name), dv.date(p.file.mtime).toFormat("MM-dd HH:mm")])), "span-4");
+  .map(p => [link(p.file.path.replace(/\.md$/, ""), p.file.name), formatDate(p.file.mtime, "MM-dd HH:mm", "-")])), "span-4");
 
 card("Tag Pulse", `<div class="tag-cloud">${topTags || '<span class="muted">No tags yet</span>'}</div>`, "span-4");
 
