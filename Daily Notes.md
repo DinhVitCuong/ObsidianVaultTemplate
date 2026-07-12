@@ -24,13 +24,17 @@ LIMIT 30
 ```dataviewjs
 const today = dv.luxon.DateTime.now().startOf("day");
 const notes = dv.pages('"daily_notes"').array();
-const days = new Set(notes.map(p => {
-if (p.date) return dv.date(p.date).toFormat("yyyy-MM-dd");
-if (/^\d{2}$/.test(p.file.name)) {
-  const match = p.file.path.match(/daily_notes\/(\d{4})\/(\d{2})\/(\d{2})\.md$/);
-  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+function formatDate(value, format, fallback = null) {
+  const date = value ? dv.date(value) : null;
+  return date && date.isValid !== false ? date.toFormat(format) : fallback;
 }
-return null;
+const days = new Set(notes.map(p => {
+  if (p.date) return formatDate(p.date, "yyyy-MM-dd");
+  if (/^\d{2}$/.test(p.file.name)) {
+    const match = p.file.path.match(/daily_notes\/(\d{4})\/(\d{2})\/(\d{2})\.md$/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  return null;
 }).filter(Boolean));
 
 let streak = 0;
