@@ -71,11 +71,54 @@
   gap: 1rem;
 }
 
-.dashboard-purple .dash-visuals {
+.dashboard-purple .callout[data-callout="dashboard-visuals"] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-visuals"] > .callout-title,
+.dashboard-purple .callout[data-callout="dashboard-visuals"] .callout[data-callout="dashboard-panel"] > .callout-title {
+  display: none;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-visuals"] > .callout-content {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  min-width: 0;
+  padding: 0;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-panel"] {
+  min-height: clamp(13rem, 28vw, 20rem);
+  margin: 0;
+  overflow: hidden;
+  border: thin solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-panel"] > .callout-content {
+  height: 100%;
+  padding: 0;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-panel"] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: clamp(13rem, 28vw, 20rem);
+  object-fit: cover;
+  object-position: center;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-panel"] .block-language-juggl {
+  margin: 0;
+}
+
+.dashboard-purple .callout[data-callout="dashboard-graph-seed"] {
+  display: none;
 }
 
 .dashboard-purple .dash-shell {
@@ -283,55 +326,6 @@
 
 .dashboard-purple .focus-list b {
   color: var(--purple-800);
-}
-
-.dashboard-purple .image-reference {
-  position: relative;
-  display: grid;
-  min-height: clamp(13rem, 28vw, 20rem);
-  overflow: hidden;
-  border: thin solid var(--line);
-  border-radius: 0.5rem;
-  background: #fff;
-  text-decoration: none;
-}
-
-.dashboard-purple .image-panel,
-.dashboard-purple .image-placeholder {
-  background:
-    linear-gradient(135deg, rgba(15, 159, 156, 0.16), transparent 38%),
-    linear-gradient(315deg, rgba(233, 93, 79, 0.16), transparent 42%),
-    repeating-linear-gradient(45deg, rgba(109, 40, 217, 0.08) 0 0.55rem, rgba(255, 255, 255, 0.86) 0.55rem 1.1rem);
-}
-
-.dashboard-purple .image-panel img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.dashboard-purple .graph-missing b {
-  color: var(--ink);
-  font-size: 1.05rem;
-}
-
-.dashboard-purple .graph-missing {
-  display: grid;
-  align-content: end;
-  gap: 0.3rem;
-  padding: 1rem;
-  background:
-    linear-gradient(135deg, rgba(109, 40, 217, 0.12), transparent),
-    linear-gradient(180deg, #fff, #f8fbff);
-}
-
-.dashboard-purple .graph-reference iframe {
-  width: 100%;
-  height: 100%;
-  min-height: clamp(13rem, 28vw, 20rem);
-  border: 0;
-  background: #fff;
 }
 
 .dashboard-purple .plotly-card-chart {
@@ -656,6 +650,10 @@
   }
 
   .dashboard-purple .dash-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-purple .callout[data-callout="dashboard-visuals"] > .callout-content {
     grid-template-columns: 1fr;
   }
 
